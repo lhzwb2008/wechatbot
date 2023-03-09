@@ -18,27 +18,26 @@ type ChatGPTResponseBody struct {
 	ID      string                 `json:"id"`
 	Object  string                 `json:"object"`
 	Created int                    `json:"created"`
-	Model   string                 `json:"model"`
 	Choices []ChoiceItem           `json:"choices"`
 	Usage   map[string]interface{} `json:"usage"`
 }
 
 type ChoiceItem struct {
-	Text         string `json:"text"`
 	Index        int    `json:"index"`
-	Logprobs     int    `json:"logprobs"`
+	Message     Message    `json:"message"`
 	FinishReason string `json:"finish_reason"`
 }
+
+type Message struct{
+	Role	string `json:"role"`
+	Content string `json:"content"`
+}
+
 
 // ChatGPTRequestBody 响应体
 type ChatGPTRequestBody struct {
 	Model            string  `json:"model"`
-	Prompt           string  `json:"prompt"`
-	MaxTokens        int     `json:"max_tokens"`
-	Temperature      float32 `json:"temperature"`
-	TopP             int     `json:"top_p"`
-	FrequencyPenalty int     `json:"frequency_penalty"`
-	PresencePenalty  int     `json:"presence_penalty"`
+	Messages	[]Message `json:"messages"`
 }
 
 // Completions gtp文本模型回复
@@ -48,13 +47,13 @@ type ChatGPTRequestBody struct {
 //-d '{"model": "text-davinci-003", "prompt": "give me good song", "temperature": 0, "max_tokens": 7}'
 func Completions(msg string) (string, error) {
 	requestBody := ChatGPTRequestBody{
-		Model:            "text-davinci-003",
-		Prompt:           msg,
-		MaxTokens:        1024,
-		Temperature:      0.7,
-		TopP:             1,
-		FrequencyPenalty: 0,
-		PresencePenalty:  0,
+		Model:            "gpt-3.5-turbo",
+		Messages: 	[]Message{
+			Message{ 
+				"user", 
+				msg, 
+			},
+		},
 	}
 	requestData, err := json.Marshal(requestBody)
 
@@ -62,7 +61,7 @@ func Completions(msg string) (string, error) {
 		return "", err
 	}
 	log.Printf("request gtp json string : %v", string(requestData))
-	req, err := http.NewRequest("POST", BASEURL+"completions", bytes.NewBuffer(requestData))
+	req, err := http.NewRequest("POST", BASEURL+"chat/completions", bytes.NewBuffer(requestData))
 	if err != nil {
 		return "", err
 	}
@@ -93,7 +92,7 @@ func Completions(msg string) (string, error) {
 
 	var reply string
 	if len(gptResponseBody.Choices) > 0 {
-		reply = gptResponseBody.Choices[0].Text
+		reply = gptResponseBody.Choices[0].Message.Content
 	}
 	log.Printf("gpt response text: %s \n", reply)
 	return reply, nil
